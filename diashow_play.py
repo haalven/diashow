@@ -197,7 +197,7 @@ def main() -> int:
     #win.resize(1280, 720)
     #win.showMaximized()
     win.showFullScreen()
-    win.show()
+    #win.show()
     return app.exec()
 
 if __name__ == '__main__':
