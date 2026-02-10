@@ -181,10 +181,12 @@ def main() -> int:
 
     #arguments = get_arguments(my_name)
 
+    slides_file = pathlib.Path(config['slidesfile'])
+
     try:
-        slides = Slides.load_from_file(config['slidesfile'])
+        slides = Slides.load_from_file(slides_file)
         if not slides:
-            warn('no slides in: ' + str(config['slidesfile']))
+            warn('no slides in: ' + str(slides_file))
     except Exception as e:
         print(f'error: {e}', file=sys.stderr)
         return 1
