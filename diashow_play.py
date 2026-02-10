@@ -11,7 +11,7 @@ import sys, pathlib, tomllib, argparse, json
 from dataclasses import dataclass
 from typing import List
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import (
     QKeyEvent,
     QPixmap,
@@ -83,10 +83,11 @@ class Slides:
 
 # SlideshowWindow class
 class SlideshowWindow(QMainWindow):
-    def __init__(self, slides: Slides) -> None:
+    def __init__(self, slides: Slides, timer_seconds: float) -> None:
         super().__init__()
         self.setWindowTitle('Diashow')
         self._slides = slides
+        self._timer_seconds = timer_seconds
         self._index = 0
         self._label = QLabel(alignment=Qt.AlignmentFlag.AlignCenter) # type: ignore
         self._label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -94,6 +95,8 @@ class SlideshowWindow(QMainWindow):
         #self._label.setStyleSheet('background: white;')
         self.setCentralWidget(self._label)
         self._pixmap_original: QPixmap | None = None
+        self._timer = QTimer(self)
+        self._timer.timeout.connect(self._advance_by_timer)
         self._load_current_image()
 
     def _load_current_image(self) -> None:
@@ -138,8 +141,26 @@ class SlideshowWindow(QMainWindow):
             self._next()
         elif key == Qt.Key.Key_Left:
             self._prev()
+        elif key == Qt.Key.Key_Space:
+            self._toggle_timer()
         else:
             super().keyPressEvent(event)
+
+    def _toggle_timer(self) -> None:
+        if self._timer.isActive():
+            self._timer.stop()
+            return
+        if self._timer_seconds <= 0:
+            return
+        if self._index >= len(self._slides.paths) - 1:
+            return
+        self._timer.start(int(self._timer_seconds * 1000))
+
+    def _advance_by_timer(self) -> None:
+        if self._index < len(self._slides.paths) - 1:
+            self._next()
+        if self._index >= len(self._slides.paths) - 1:
+            self._timer.stop()
 
     def _next(self) -> None:
         if self._index < len(self._slides.paths) - 1:
@@ -193,7 +214,7 @@ def main() -> int:
 
     app = QApplication(sys.argv)
     apply_dark_theme(app)
-    win = SlideshowWindow(slides)
+    win = SlideshowWindow(slides, float(config['timer']))
     #win.resize(1280, 720)
     #win.showMaximized()
     win.showFullScreen()
