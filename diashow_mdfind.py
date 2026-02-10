@@ -40,10 +40,7 @@ def get_arguments(my_name: str) -> argparse.Namespace:
 def mdfind(pattern: str) -> list:
     shell_cmd = ('mdfind', pattern)
     returned = subprocess.run(shell_cmd, capture_output=True, text=True)
-    result_list = returned.stdout.split('\n')
-    while '' in result_list:
-        result_list.remove('')
-    return result_list
+    return [line for line in returned.stdout.splitlines() if line]
 
 # json serialization
 def json_save(data, filepath):
@@ -65,7 +62,7 @@ def main() -> int:
     arguments = get_arguments(my_name)
 
     # get the negative list
-    negative_list = mdfind(str(config['negative']))
+    negative_list = mdfind(str(config.get('negative')))
 
     # get the positive list
     result_list = mdfind(str(arguments.PATTERN))
@@ -92,13 +89,13 @@ def main() -> int:
     sorted_list = sorted(imgpath_list)
 
     # shuffle the paths
-    shuffled_list = random.shuffle(imgpath_list)
+    random.shuffle(imgpath_list)
 
     # save the list
     if config['shuffled']:
-        json_save(shuffled_list, config['slidesfile'])
+        json_save(imgpath_list, config.get('slidesfile'))
     else:
-        json_save(sorted_list, config['slidesfile'])
+        json_save(sorted_list, config.get('slidesfile'))
 
     print(f'found {imgpath_len} images')
     return 0
