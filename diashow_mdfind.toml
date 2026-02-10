@@ -1,0 +1,4 @@
+extensions = ['.png', '.jpg', '.jpeg', '.tif', '.tiff']
+negative   = 'tag:ds_ignore'
+shuffled   = false
+slidesfile = '/Users/xhalc/.slides.json'
