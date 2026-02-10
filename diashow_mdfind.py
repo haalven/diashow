@@ -37,7 +37,7 @@ def get_arguments(my_name: str) -> argparse.Namespace:
     return parser.parse_args()
 
 # mdfind
-def mdfind(pattern: str) -> list:
+def mdfind(pattern: str) -> list[str]:
     shell_cmd = ('mdfind', pattern)
     returned = subprocess.run(shell_cmd, capture_output=True, text=True)
     return [line for line in returned.stdout.splitlines() if line]
@@ -63,13 +63,14 @@ def main() -> int:
 
     # get the negative list
     negative_list = mdfind(str(config.get('negative')))
+    print('negatives:', len(negative_list))
 
     # get the positive list
     result_list = mdfind(str(arguments.PATTERN))
 
     # filtered list
     filtered_list = [p for p in result_list if p not in negative_list]
-    print('results:', len(filtered_list))
+    print('positives:', len(filtered_list))
 
     # collect image files according to extension
     imgpath_list = []
