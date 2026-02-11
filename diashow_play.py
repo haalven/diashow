@@ -11,7 +11,7 @@ import sys, pathlib, tomllib, argparse, json
 from dataclasses import dataclass
 from typing import List
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QElapsedTimer
 from PyQt6.QtGui import (
     QKeyEvent,
     QPixmap,
@@ -83,6 +83,9 @@ class Slides:
 
 # SlideshowWindow class
 class SlideshowWindow(QMainWindow):
+    _TRANSITION_MS = 333
+    _TRANSITION_FRAME_MS = 16
+
     def __init__(self, slides: Slides, timer_seconds: float) -> None:
         super().__init__()
         self.setWindowTitle('Diashow')
@@ -96,26 +99,89 @@ class SlideshowWindow(QMainWindow):
         self.setCentralWidget(self._label)
         self.setCursor(Qt.CursorShape.BlankCursor)  # hide mouse cursor
         self._pixmap_original: QPixmap | None = None
+        self._transition_from: QPixmap | None = None
+        self._transition_to: QPixmap | None = None
+        self._transition_target_index: int | None = None
+        self._transition_elapsed = QElapsedTimer()
+
+        self._transition_timer = QTimer(self)
+        self._transition_timer.timeout.connect(self._transition_step)
+
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._advance_by_timer)
         self._load_current_image()
 
-    def _load_current_image(self) -> None:
-        path = self._slides.paths[self._index]
+    def _load_image_at_index(self, index: int) -> QPixmap | None:
+        path = self._slides.paths[index]
         pix = QPixmap(str(path))
         if pix.isNull():
             QMessageBox.warning(self, 'error:', f'could not load image:\n{path}')
-            self._pixmap_original = None
             self._label.setText(f'error while loading:\n{path}')
-            return
+            return None
         img = pix.toImage().convertToFormat(QImage.Format.Format_ARGB32)
         bg = QImage(img.size(), QImage.Format.Format_ARGB32)
         bg.fill(Qt.GlobalColor.white)
         painter = QPainter(bg)
         painter.drawImage(0, 0, img)
         painter.end()
-        self._pixmap_original = QPixmap.fromImage(bg)
+        return QPixmap.fromImage(bg)
+
+    def _load_current_image(self) -> None:
+        self._stop_transition()
+        self._pixmap_original = self._load_image_at_index(self._index)
         self._update_view()
+
+    def _stop_transition(self) -> None:
+        self._transition_timer.stop()
+        self._transition_from = None
+        self._transition_to = None
+        self._transition_target_index = None
+
+    def _render_transition_frame(self, progress: float) -> None:
+        if self._transition_from is None or self._transition_to is None:
+            return
+        target_size = self._label.size()
+        if target_size.width() <= 0 or target_size.height() <= 0:
+            return
+
+        canvas = QImage(target_size, QImage.Format.Format_ARGB32)
+        canvas.fill(Qt.GlobalColor.black)
+        painter = QPainter(canvas)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+
+        from_scaled = self._transition_from.scaled(
+            target_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        to_scaled = self._transition_to.scaled(
+            target_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+
+        from_x = (target_size.width() - from_scaled.width()) // 2
+        from_y = (target_size.height() - from_scaled.height()) // 2
+        to_x = (target_size.width() - to_scaled.width()) // 2
+        to_y = (target_size.height() - to_scaled.height()) // 2
+
+        painter.setOpacity(1.0 - progress)
+        painter.drawPixmap(from_x, from_y, from_scaled)
+        painter.setOpacity(progress)
+        painter.drawPixmap(to_x, to_y, to_scaled)
+        painter.end()
+
+        self._label.setPixmap(QPixmap.fromImage(canvas))
+
+    def _transition_step(self) -> None:
+        progress = min(1.0, self._transition_elapsed.elapsed() / self._TRANSITION_MS)
+        self._render_transition_frame(progress)
+        if progress >= 1.0:
+            if self._transition_target_index is not None:
+                self._index = self._transition_target_index
+            self._pixmap_original = self._transition_to
+            self._stop_transition()
+            self._update_view()
 
     def _update_view(self) -> None:
         if self._pixmap_original is None:
@@ -133,6 +199,10 @@ class SlideshowWindow(QMainWindow):
 
     def resizeEvent(self, event) -> None: # type: ignore
         super().resizeEvent(event)
+        if self._transition_timer.isActive():
+            progress = min(1.0, self._transition_elapsed.elapsed() / self._TRANSITION_MS)
+            self._render_transition_frame(progress)
+            return
         self._update_view()
 
     # left and right keys to move through the list of images
@@ -158,19 +228,27 @@ class SlideshowWindow(QMainWindow):
         self._timer.start(int(self._timer_seconds * 1000))
 
     def _advance_by_timer(self) -> None:
-#       if self._index < len(self._slides.paths) - 1:
-#           self._next()
-#       if self._index >= len(self._slides.paths) - 1:
-#           self._timer.stop()
-        self._index = (self._index + 1) % len(self._slides.paths)
-        self._load_current_image()
+        if self._transition_timer.isActive() or self._pixmap_original is None:
+            return
+        next_index = (self._index + 1) % len(self._slides.paths)
+        next_pixmap = self._load_image_at_index(next_index)
+        if next_pixmap is None:
+            return
+        self._transition_from = self._pixmap_original
+        self._transition_to = next_pixmap
+        self._transition_target_index = next_index
+        self._transition_elapsed.start()
+        self._transition_timer.start(self._TRANSITION_FRAME_MS)
+        self._transition_step()
 
     def _next(self) -> None:
+        self._stop_transition()
         if self._index < len(self._slides.paths) - 1:
             self._index += 1
             self._load_current_image()
 
     def _prev(self) -> None:
+        self._stop_transition()
         if self._index > 0:
             self._index -= 1
             self._load_current_image()
