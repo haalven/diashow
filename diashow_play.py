@@ -203,6 +203,8 @@ def main() -> int:
 
     config = read_configuration(my_path)
 
+    timer = float(config['timer'])
+
     #arguments = get_arguments(my_name)
 
     slides_file = pathlib.Path(config['slidesfile'])
@@ -217,7 +219,7 @@ def main() -> int:
 
     app = QApplication(sys.argv)
     apply_dark_theme(app)
-    win = SlideshowWindow(slides, float(config['timer']))
+    win = SlideshowWindow(slides, timer)
     #win.resize(1280, 720)
     #win.showMaximized()
     win.showFullScreen()
