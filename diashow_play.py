@@ -94,6 +94,7 @@ class SlideshowWindow(QMainWindow):
         #self._label.setAutoFillBackground(True)
         #self._label.setStyleSheet('background: white;')
         self.setCentralWidget(self._label)
+        self.setCursor(Qt.CursorShape.BlankCursor)  # hide mouse cursor
         self._pixmap_original: QPixmap | None = None
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._advance_by_timer)
