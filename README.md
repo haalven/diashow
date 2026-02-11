@@ -16,3 +16,9 @@ to your shell’s rc file, you can do things like:
 $ `ds 'tag:mountain AND (tag:america OR tag:africa)'`
 
 but you can also generate JSON lists of image paths on your own…
+
+usage:
+
+`←` and `→` move through image list
+
+`Space` start or stop the slideshow (repeats automatically)
