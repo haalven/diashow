@@ -179,7 +179,8 @@ class SlideshowWindow(QMainWindow):
 def apply_dark_theme(app: QApplication) -> None:
     app.setStyle("Fusion")
     p = QPalette()
-    p.setColor(QPalette.ColorRole.Window, QColor(30, 30, 30))
+    #p.setColor(QPalette.ColorRole.Window, QColor(30, 30, 30))
+    p.setColor(QPalette.ColorRole.Window, QColor(0, 0, 0))
     p.setColor(QPalette.ColorRole.WindowText, QColor(220, 220, 220))
     p.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
     p.setColor(QPalette.ColorRole.AlternateBase, QColor(35, 35, 35))
