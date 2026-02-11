@@ -153,15 +153,17 @@ class SlideshowWindow(QMainWindow):
             return
         if self._timer_seconds <= 0:
             return
-        if self._index >= len(self._slides.paths) - 1:
-            return
+#       if self._index >= len(self._slides.paths) - 1:
+#           return
         self._timer.start(int(self._timer_seconds * 1000))
 
     def _advance_by_timer(self) -> None:
-        if self._index < len(self._slides.paths) - 1:
-            self._next()
-        if self._index >= len(self._slides.paths) - 1:
-            self._timer.stop()
+#       if self._index < len(self._slides.paths) - 1:
+#           self._next()
+#       if self._index >= len(self._slides.paths) - 1:
+#           self._timer.stop()
+        self._index = (self._index + 1) % len(self._slides.paths)
+        self._load_current_image()
 
     def _next(self) -> None:
         if self._index < len(self._slides.paths) - 1:
