@@ -7,7 +7,7 @@
 # you need to 'pip install PyQt6'
 
 from __future__ import annotations
-import sys, pathlib, tomllib, argparse, json
+import sys, pathlib, tomllib, argparse, json, subprocess
 from dataclasses import dataclass
 from typing import List
 
@@ -214,8 +214,22 @@ class SlideshowWindow(QMainWindow):
             self._prev()
         elif key == Qt.Key.Key_Space:
             self._toggle_timer()
+        elif key == Qt.Key.Key_F:
+            self._show_current_image_in_finder()
         else:
             super().keyPressEvent(event)
+
+    def _show_current_image_in_finder(self) -> None:
+        image_path = self._slides.paths[self._index]
+        try:
+            subprocess.run(
+                ['open', '-R', str(image_path)],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError as e:
+            warn(f'failed to open Finder for {image_path}: {e}')
 
     def _toggle_timer(self) -> None:
         if self._timer.isActive():
